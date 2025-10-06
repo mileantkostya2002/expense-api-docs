@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Odoo Mobile API Docs</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.18.3/swagger-ui.css" />
+  <title>Odoo Expenses API - Swagger UI</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4/swagger-ui.css" />
   <style>
     body {
       margin: 0;
@@ -18,23 +18,157 @@
 <body>
   <div id="swagger-ui"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.18.3/swagger-ui-bundle.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.18.3/swagger-ui-standalone-preset.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4/swagger-ui-bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4/swagger-ui-standalone-preset.js"></script>
   <script>
+    const swaggerSpec = {
+      openapi: "3.0.3",
+      info: {
+        title: "Odoo Expenses API",
+        description: "API for managing expenses, expense reports, and attachments in Odoo",
+        version: "1.0.0"
+      },
+      servers: [
+        { url: "/api/v1", description: "Local server" }
+      ],
+      paths: {
+        "/expense": {
+          post: {
+            summary: "Create an expense",
+            requestBody: {
+              required: true,
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string" },
+                      total_amount_currency: { type: "number" },
+                      product_id: { type: "integer" },
+                      payment_mode: { type: "string", enum: ["own_account", "company_account"] },
+                      date: { type: "string", format: "date" },
+                      description: { type: "string" },
+                      task: { type: "object", properties: { id: { type: "integer" } } },
+                      vehicle: { type: "object", properties: { id: { type: "integer" } } },
+                      tax_ids: { type: "array", items: { type: "integer" } },
+                      vendor_id: { type: "integer" }
+                    },
+                    required: ["name", "total_amount_currency", "product_id"]
+                  }
+                }
+              }
+            },
+            responses: {
+              "201": { description: "Expense created" },
+              "400": { description: "Validation error" },
+              "500": { description: "Internal server error" }
+            }
+          }
+        },
+        "/expense/{expense_id}/delete": {
+          delete: {
+            summary: "Delete an expense",
+            parameters: [
+              { in: "path", name: "expense_id", required: true, schema: { type: "integer" } }
+            ],
+            responses: {
+              "200": { description: "Expense deleted" },
+              "403": { description: "Forbidden" },
+              "404": { description: "Expense not found" },
+              "500": { description: "Internal server error" }
+            }
+          }
+        },
+        "/expense/reports": {
+          get: {
+            summary: "Get a list of expense reports",
+            parameters: [
+              { in: "query", name: "state", schema: { type: "string" } },
+              { in: "query", name: "q", schema: { type: "string" } },
+              { in: "query", name: "date_from", schema: { type: "string", format: "date" } },
+              { in: "query", name: "date_to", schema: { type: "string", format: "date" } },
+              { in: "query", name: "sort_by", schema: { type: "string" } },
+              { in: "query", name: "sort_order", schema: { type: "string" } }
+            ],
+            responses: { "200": { description: "List of expense reports" }, "500": { description: "Internal server error" } }
+          }
+        },
+        "/report/{report_id}": {
+          get: {
+            summary: "Get details of a single report",
+            parameters: [
+              { in: "path", name: "report_id", required: true, schema: { type: "integer" } }
+            ],
+            responses: {
+              "200": { description: "Report details" },
+              "404": { description: "Report not found" },
+              "500": { description: "Internal server error" }
+            }
+          }
+        },
+        "/expense/create-report": {
+          post: {
+            summary: "Create an expense report with multiple expenses",
+            requestBody: {
+              required: true,
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string" },
+                      expense_ids: { type: "array", items: { type: "integer" } },
+                      journal_id: { type: "integer" }
+                    },
+                    required: ["expense_ids"]
+                  }
+                }
+              }
+            },
+            responses: { "201": { description: "Report created" }, "400": { description: "Validation error" }, "500": { description: "Internal server error" } }
+          }
+        },
+        "/report/{report_id}/submit": {
+          post: {
+            summary: "Submit an expense report for approval",
+            parameters: [
+              { in: "path", name: "report_id", required: true, schema: { type: "integer" } }
+            ],
+            responses: { "200": { description: "Report submitted" }, "400": { description: "Invalid report state" }, "404": { description: "Report not found" }, "500": { description: "Internal server error" } }
+          }
+        },
+        "/expense/{expense_id}/attachments": {
+          get: {
+            summary: "Get a list of attachments for an expense",
+            parameters: [{ in: "path", name: "expense_id", required: true, schema: { type: "integer" } }],
+            responses: { "200": { description: "List of attachments" }, "404": { description: "Expense not found" } }
+          },
+          post: {
+            summary: "Create an attachment for an expense",
+            parameters: [{ in: "path", name: "expense_id", required: true, schema: { type: "integer" } }],
+            requestBody: {
+              required: true,
+              content: { "application/json": { schema: { type: "object", properties: { file_name: { type: "string" }, file_data: { type: "string" } }, required: ["file_name","file_data"] } } }
+            },
+            responses: { "201": { description: "Attachment created" }, "400": { description: "Validation error" }, "403": { description: "Forbidden" }, "404": { description: "Expense not found" }, "500": { description: "Internal server error" } }
+          }
+        },
+        "/vehicles": {
+          get: {
+            summary: "Get all vehicles",
+            responses: { "200": { description: "List of vehicles" }, "500": { description: "Internal server error" } }
+          }
+        }
+      }
+    };
+
     window.onload = function() {
-      const ui = SwaggerUIBundle({
-        url: "openapi.yaml",  // <-- Replace with your YAML file name
+      SwaggerUIBundle({
+        spec: swaggerSpec,
         dom_id: '#swagger-ui',
-        deepLinking: true,
-        presets: [
-          SwaggerUIBundle.presets.apis,
-          SwaggerUIStandalonePreset
-        ],
-        layout: "StandaloneLayout",
-        docExpansion: "none",
-        defaultModelsExpandDepth: -1
+        presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+        layout: "BaseLayout"
       });
-      window.ui = ui;
     };
   </script>
 </body>
