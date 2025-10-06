@@ -1,175 +1,461 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Odoo Expenses API - Swagger UI</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4/swagger-ui.css" />
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-    }
-    #swagger-ui {
-      width: 100%;
-      height: 100vh;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense API Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 10px;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .auth-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .endpoint {
+            background: white;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .endpoint-header {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .method {
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .method.get { background: #61affe; color: white; }
+        .method.post { background: #49cc90; color: white; }
+        .method.put { background: #fca130; color: white; }
+        .method.delete { background: #f93e3e; color: white; }
+        
+        .endpoint-path {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            color: #333;
+        }
+        
+        .endpoint-body {
+            padding: 20px;
+        }
+        
+        .description {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        
+        .section-title {
+            font-weight: bold;
+            margin: 15px 0 10px 0;
+            color: #667eea;
+        }
+        
+        pre {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 0.9em;
+        }
+        
+        .tag {
+            display: inline-block;
+            background: #e9ecef;
+            padding: 3px 10px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            margin-right: 5px;
+        }
+    </style>
 </head>
 <body>
-  <div id="swagger-ui"></div>
+    <div class="container">
+        <header>
+            <h1>📊 Expense Management API</h1>
+            <p>Complete API documentation for expense tracking system</p>
+        </header>
 
-  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4/swagger-ui-bundle.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4/swagger-ui-standalone-preset.js"></script>
-  <script>
-    const swaggerSpec = {
-      openapi: "3.0.0",
-      info: {
-        title: "Odoo Expenses API",
-        description: "API for managing expenses, expense reports, and attachments in Odoo",
-        version: "1.0.0"
-      },
-      servers: [
-        { url: "/api/v1", description: "Local server" }
-      ],
-      paths: {
-        "/expense": {
-          post: {
-            summary: "Create an expense",
-            requestBody: {
-              required: true,
-              content: {
-                "application/json": {
-                  schema: {
-                    type: "object",
-                    properties: {
-                      name: { type: "string" },
-                      total_amount_currency: { type: "number" },
-                      product_id: { type: "integer" },
-                      payment_mode: { type: "string", enum: ["own_account", "company_account"] },
-                      date: { type: "string", format: "date" },
-                      description: { type: "string" },
-                      task: { type: "object", properties: { id: { type: "integer" } } },
-                      vehicle: { type: "object", properties: { id: { type: "integer" } } },
-                      tax_ids: { type: "array", items: { type: "integer" } },
-                      vendor_id: { type: "integer" }
-                    },
-                    required: ["name", "total_amount_currency", "product_id"]
-                  }
-                }
-              }
-            },
-            responses: {
-              "201": { description: "Expense created" },
-              "400": { description: "Validation error" },
-              "500": { description: "Internal server error" }
-            }
-          }
-        },
-        "/expense/{expense_id}/delete": {
-          delete: {
-            summary: "Delete an expense",
-            parameters: [
-              { in: "path", name: "expense_id", required: true, schema: { type: "integer" } }
-            ],
-            responses: {
-              "200": { description: "Expense deleted" },
-              "403": { description: "Forbidden" },
-              "404": { description: "Expense not found" },
-              "500": { description: "Internal server error" }
-            }
-          }
-        },
-        "/expense/reports": {
-          get: {
-            summary: "Get a list of expense reports",
-            parameters: [
-              { in: "query", name: "state", schema: { type: "string" } },
-              { in: "query", name: "q", schema: { type: "string" } },
-              { in: "query", name: "date_from", schema: { type: "string", format: "date" } },
-              { in: "query", name: "date_to", schema: { type: "string", format: "date" } },
-              { in: "query", name: "sort_by", schema: { type: "string" } },
-              { in: "query", name: "sort_order", schema: { type: "string" } }
-            ],
-            responses: { "200": { description: "List of expense reports" }, "500": { description: "Internal server error" } }
-          }
-        },
-        "/report/{report_id}": {
-          get: {
-            summary: "Get details of a single report",
-            parameters: [
-              { in: "path", name: "report_id", required: true, schema: { type: "integer" } }
-            ],
-            responses: {
-              "200": { description: "Report details" },
-              "404": { description: "Report not found" },
-              "500": { description: "Internal server error" }
-            }
-          }
-        },
-        "/expense/create-report": {
-          post: {
-            summary: "Create an expense report with multiple expenses",
-            requestBody: {
-              required: true,
-              content: {
-                "application/json": {
-                  schema: {
-                    type: "object",
-                    properties: {
-                      name: { type: "string" },
-                      expense_ids: { type: "array", items: { type: "integer" } },
-                      journal_id: { type: "integer" }
-                    },
-                    required: ["expense_ids"]
-                  }
-                }
-              }
-            },
-            responses: { "201": { description: "Report created" }, "400": { description: "Validation error" }, "500": { description: "Internal server error" } }
-          }
-        },
-        "/report/{report_id}/submit": {
-          post: {
-            summary: "Submit an expense report for approval",
-            parameters: [
-              { in: "path", name: "report_id", required: true, schema: { type: "integer" } }
-            ],
-            responses: { "200": { description: "Report submitted" }, "400": { description: "Invalid report state" }, "404": { description: "Report not found" }, "500": { description: "Internal server error" } }
-          }
-        },
-        "/expense/{expense_id}/attachments": {
-          get: {
-            summary: "Get a list of attachments for an expense",
-            parameters: [{ in: "path", name: "expense_id", required: true, schema: { type: "integer" } }],
-            responses: { "200": { description: "List of attachments" }, "404": { description: "Expense not found" } }
-          },
-          post: {
-            summary: "Create an attachment for an expense",
-            parameters: [{ in: "path", name: "expense_id", required: true, schema: { type: "integer" } }],
-            requestBody: {
-              required: true,
-              content: { "application/json": { schema: { type: "object", properties: { file_name: { type: "string" }, file_data: { type: "string" } }, required: ["file_name","file_data"] } } }
-            },
-            responses: { "201": { description: "Attachment created" }, "400": { description: "Validation error" }, "403": { description: "Forbidden" }, "404": { description: "Expense not found" }, "500": { description: "Internal server error" } }
-          }
-        },
-        "/vehicles": {
-          get: {
-            summary: "Get all vehicles",
-            responses: { "200": { description: "List of vehicles" }, "500": { description: "Internal server error" } }
-          }
-        }
-      }
-    };
+        <div class="auth-info">
+            <h3>🔐 Authentication</h3>
+            <p>All endpoints (except public ones) require Bearer token authentication:</p>
+            <pre>Authorization: Bearer YOUR_API_TOKEN</pre>
+        </div>
 
-    window.onload = function() {
-      SwaggerUIBundle({
-        spec: swaggerSpec,
-        dom_id: '#swagger-ui',
-        presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
-        layout: "BaseLayout"
-      });
-    };
-  </script>
+        <!-- EXPENSES ENDPOINTS -->
+        <h2 style="margin: 30px 0 15px 0;">💰 Expenses</h2>
+
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="endpoint-path">/api/v1/expenses</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="description">Get list of expenses for authenticated user (current month by default)</p>
+                
+                <div class="section-title">Query Parameters:</div>
+                <pre>limit=20            # Results per page
+offset=0            # Pagination offset
+state=draft         # Filter by state
+date_from=2025-10-01
+date_to=2025-10-31
+q=taxi              # Search in name/description</pre>
+
+                <div class="section-title">Example Response:</div>
+                <pre>{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "Taxi to meeting",
+      "total_amount_currency": 45.50,
+      "date": "2025-10-06",
+      "state": "draft"
+    }
+  ],
+  "pagination": {
+    "total_count": 15,
+    "limit": 20,
+    "offset": 0
+  }
+}</pre>
+            </div>
+        </div>
+
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method post">POST</span>
+                <span class="endpoint-path">/api/v1/expense</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="description">Create new expense</p>
+                
+                <div class="section-title">Request Body:</div>
+                <pre>{
+  "name": "Taxi to client meeting",
+  "total_amount_currency": 45.50,
+  "product_id": 12,
+  "date": "2025-10-06",
+  "description": "Transportation expense",
+  "payment_mode": "own_account"
+}</pre>
+
+                <div class="section-title">Response:</div>
+                <pre>{
+  "success": true,
+  "expense_id": 25,
+  "message": "Expense created successfully"
+}</pre>
+            </div>
+        </div>
+
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="endpoint-path">/api/v1/expense/{expense_id}</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="description">Get single expense details</p>
+                
+                <div class="section-title">Example:</div>
+                <pre>GET /api/v1/expense/25</pre>
+
+                <div class="section-title">Response:</div>
+                <pre>{
+  "success": true,
+  "data": {
+    "id": 25,
+    "name": "Taxi to meeting",
+    "total_amount_currency": 45.50,
+    "state": "draft",
+    "attachments": []
+  }
+}</pre>
+            </div>
+        </div>
+
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method put">PUT</span>
+                <span class="endpoint-path">/api/v1/expense/{expense_id}</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="description">Update expense (only in draft/reported state)</p>
+                
+                <div class="section-title">Request Body:</div>
+                <pre>{
+  "name": "Updated expense name",
+  "total_amount_currency": 50.00,
+  "date": "2025-10-07"
+}</pre>
+            </div>
+        </div>
+
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method delete">DELETE</span>
+                <span class="endpoint-path">/api/v1/expense/{expense_id}/delete</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="description">Delete expense (only in draft/reported state)</p>
+                
+                <div class="section-title">Response:</div>
+                <pre>{
+  "success": true,
+  "message": "Expense deleted successfully"
+}</pre>
+            </div>
+        </div>
+
+        <!-- REPORTS ENDPOINTS -->
+        <h2 style="margin: 30px 0 15px 0;">📋 Reports</h2>
+
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="endpoint-path">/api/v1/expense/reports</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="description">Get list of expense reports</p>
+                
+                <div class="section-title">Response:</div>
+                <pre>{
+  "success": true,
+  "reports": [
+    {
+      "id": 5,
+      "name": "October Expenses",
+      "state": "submit",
+      "total_amount": 350.00,
+      "expense_count": 7
+    }
+  ]
+}</pre>
+            </div>
+        </div>
+
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method post">POST</span>
+                <span class="endpoint-path">/api/v1/expense/create-report</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="description">Create expense report from multiple expenses</p>
+                
+                <div class="section-title">Request Body:</div>
+                <pre>{
+  "name": "Monthly Expenses October",
+  "expense_ids": [1, 2, 3, 4]
+}</pre>
+
+                <div class="section-title">Response:</div>
+                <pre>{
+  "success": true,
+  "report_id": 6,
+  "report_name": "Monthly Expenses October",
+  "expense_count": 4
+}</pre>
+            </div>
+        </div>
+
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="endpoint-path">/api/v1/report/{report_id}</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="description">Get report details with all expenses</p>
+            </div>
+        </div>
+
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method post">POST</span>
+                <span class="endpoint-path">/api/v1/report/{report_id}/submit</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="description">Submit report for approval</p>
+                
+                <div class="section-title">Response:</div>
+                <pre>{
+  "success": true,
+  "message": "Expense report submitted successfully",
+  "new_state": "submit"
+}</pre>
+            </div>
+        </div>
+
+        <!-- ATTACHMENTS ENDPOINTS -->
+        <h2 style="margin: 30px 0 15px 0;">📎 Attachments</h2>
+
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="endpoint-path">/api/v1/expense/{expense_id}/attachments</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="description">Get list of attachments for expense</p>
+                
+                <div class="section-title">Response:</div>
+                <pre>{
+  "success": true,
+  "attachments": [
+    {
+      "id": 10,
+      "name": "receipt.pdf",
+      "mimetype": "application/pdf",
+      "file_size": 15420
+    }
+  ]
+}</pre>
+            </div>
+        </div>
+
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method post">POST</span>
+                <span class="endpoint-path">/api/v1/expense/{expense_id}/attachments</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="description">Upload attachment (base64 encoded)</p>
+                
+                <div class="section-title">Request Body:</div>
+                <pre>{
+  "file_name": "receipt.pdf",
+  "file_data": "JVBERi0xLjQKJeLjz9MKMSAwIG9iago8..."
+}</pre>
+            </div>
+        </div>
+
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="endpoint-path">/api/v1/expense/file/{expense_id}/attachments/{attachment_id}</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="description">Download attachment file (returns binary data)</p>
+            </div>
+        </div>
+
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method delete">DELETE</span>
+                <span class="endpoint-path">/api/v1/expense/{expense_id}/attachment/{attachment_id}</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="description">Delete attachment</p>
+            </div>
+        </div>
+
+        <!-- PUBLIC ENDPOINTS -->
+        <h2 style="margin: 30px 0 15px 0;">🌐 Public Endpoints (No Auth Required)</h2>
+
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="endpoint-path">/api/v1/expense/categories</span>
+                <span class="tag">PUBLIC</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="description">Get list of expense categories/products</p>
+                
+                <div class="section-title">Response:</div>
+                <pre>{
+  "success": true,
+  "categories": [
+    {
+      "id": 12,
+      "name": "Transportation",
+      "list_price": 0.0
+    }
+  ]
+}</pre>
+            </div>
+        </div>
+
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="endpoint-path">/api/v1/expense/vendors</span>
+                <span class="tag">PUBLIC</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="description">Get list of vendors for company account payments</p>
+            </div>
+        </div>
+
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <span class="endpoint-path">/api/v1/vehicles</span>
+                <span class="tag">PUBLIC</span>
+            </div>
+            <div class="endpoint-body">
+                <p class="description">Get list of available vehicles</p>
+                
+                <div class="section-title">Response:</div>
+                <pre>{
+  "success": true,
+  "vehicles": [
+    {
+      "id": 3,
+      "name": "Toyota Camry ABC123",
+      "driver": "John Doe"
+    }
+  ]
+}</pre>
+            </div>
+        </div>
+
+        <footer style="text-align: center; margin: 40px 0; color: #666;">
+            <p>Expense Management API v1.0.0</p>
+        </footer>
+    </div>
 </body>
 </html>
