@@ -1,24 +1,25 @@
 openapi: 3.0.0
 info:
-  title: Expense Management API
+  title: Odoo Expense API
   version: 1.0.0
-  description: API for managing expenses, reports, and attachments
-
+  description: API for managing employee expenses, expense reports, attachments, and related resources in Odoo.
 servers:
-  - url: https://your-domain.com
+  - url: https://your-odoo-domain.com
     description: Production server
-
 security:
-  - BearerAuth: []
-
+  - bearerAuth: []
 components:
   securitySchemes:
-    BearerAuth:
+    bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT
-
+      description: Employee API token from hr.employee.api_token field
   schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
     Expense:
       type: object
       properties:
@@ -26,102 +27,317 @@ components:
           type: integer
         name:
           type: string
+        description:
+          type: string
         total_amount_currency:
           type: number
+        currency:
+          type: string
         date:
           type: string
           format: date
         state:
           type: string
           enum: [draft, reported, approved, done, refused]
-
-    CreateExpense:
-      type: object
-      required:
-        - name
-        - total_amount_currency
-        - product_id
-      properties:
-        name:
+        state_display:
           type: string
-          example: "Taxi to client meeting"
-        total_amount_currency:
-          type: number
-          example: 45.50
-        product_id:
-          type: integer
-          example: 12
-        date:
-          type: string
-          format: date
-          example: "2025-10-06"
-        description:
-          type: string
-          example: "Client meeting transportation"
         payment_mode:
           type: string
           enum: [own_account, company_account]
-          example: "own_account"
-
+        payment_mode_display:
+          type: string
+        company:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+        product:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+        vendor:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+        vehicle:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+        task:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            partner_id:
+              type: integer
+              nullable: true
+        taxes:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              amount:
+                type: number
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              mimetype:
+                type: string
+              file_size:
+                type: integer
+        attachment_count:
+          type: integer
+        receipt_image:
+          type: integer
+          nullable: true
+        create_date:
+          type: string
+        write_date:
+          type: string
+    ExpenseReport:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        employee:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+        company:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+        state:
+          type: string
+        state_display:
+          type: string
+        total_amount:
+          type: number
+        currency_id:
+          type: integer
+        currency_name:
+          type: string
+        expense_count:
+          type: integer
+        expenses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Expense'
+        create_date:
+          type: string
+        write_date:
+          type: string
+        approval_date:
+          type: string
+          nullable: true
 paths:
   /api/v1/expenses:
     get:
-      summary: Get list of expenses
-      tags: [Expenses]
+      summary: Get employee expenses list
+      description: Returns a list of expenses for the authenticated employee. By default shows current month expenses. Supports filtering, sorting, and pagination.
+      security:
+        - bearerAuth: []
       parameters:
         - name: limit
           in: query
           schema:
             type: integer
             default: 20
+          description: Number of records to return
         - name: offset
           in: query
           schema:
             type: integer
             default: 0
+          description: Offset for pagination
         - name: state
           in: query
           schema:
             type: string
             enum: [draft, reported, approved, done, refused]
+          description: Filter by expense state
         - name: date_from
           in: query
           schema:
             type: string
             format: date
+          description: Filter from date (YYYY-MM-DD)
         - name: date_to
           in: query
           schema:
             type: string
             format: date
+          description: Filter to date (YYYY-MM-DD)
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Search by name or description
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [date, name, amount, create_date]
+            default: date
+          description: Sort field
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort order
       responses:
         '200':
-          description: List of expenses
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Expense'
+                  pagination:
+                    type: object
+                    properties:
+                      total_count:
+                        type: integer
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+                      has_next:
+                        type: boolean
+                      has_prev:
+                        type: boolean
+                  filters:
+                    type: object
+                  employee:
+                    type: object
+              example:
+                success: true
+                data:
+                  - id: 123
+                    name: "Hotel accommodation"
+                    total_amount_currency: 150.00
+                    currency: "EUR"
+                    date: "2025-10-05"
+                    state: "draft"
+                    payment_mode: "own_account"
+                pagination:
+                  total_count: 45
+                  limit: 20
+                  offset: 0
+                  has_next: true
+                  has_prev: false
         '401':
           description: Unauthorized
-
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/expense:
     post:
       summary: Create new expense
-      tags: [Expenses]
+      description: Creates a new expense for the authenticated employee
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateExpense'
+              type: object
+              required:
+                - name
+                - total_amount_currency
+                - product_id
+              properties:
+                name:
+                  type: string
+                  description: Expense description
+                total_amount_currency:
+                  type: number
+                  description: Expense amount
+                product_id:
+                  type: integer
+                  description: Product category ID
+                payment_mode:
+                  type: string
+                  enum: [own_account, company_account]
+                  default: own_account
+                vendor_id:
+                  type: integer
+                  description: Vendor ID (required for company_account payment mode)
+                date:
+                  type: string
+                  format: date
+                description:
+                  type: string
+                tax_ids:
+                  type: array
+                  items:
+                    type: integer
+                task:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                vehicle:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
       responses:
         '201':
           description: Expense created successfully
         '400':
-          description: Invalid request data
+          description: Bad request
         '401':
           description: Unauthorized
-
   /api/v1/expense/{expense_id}:
     get:
       summary: Get single expense details
-      tags: [Expenses]
+      security:
+        - bearerAuth: []
       parameters:
         - name: expense_id
           in: path
@@ -130,13 +346,23 @@ paths:
             type: integer
       responses:
         '200':
-          description: Expense details
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Expense'
         '404':
           description: Expense not found
-
     put:
       summary: Update expense
-      tags: [Expenses]
+      description: Updates expense (only in draft or reported state)
+      security:
+        - bearerAuth: []
       parameters:
         - name: expense_id
           in: path
@@ -144,6 +370,7 @@ paths:
           schema:
             type: integer
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -153,19 +380,44 @@ paths:
                   type: string
                 total_amount_currency:
                   type: number
+                product_id:
+                  type: integer
+                payment_mode:
+                  type: string
+                vendor_id:
+                  type: integer
                 date:
                   type: string
                   format: date
+                description:
+                  type: string
+                tax_ids:
+                  type: array
+                  items:
+                    type: integer
+                task:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                vehicle:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
       responses:
         '200':
           description: Expense updated successfully
         '403':
           description: Cannot edit expense in current state
-
+        '404':
+          description: Expense not found
   /api/v1/expense/{expense_id}/delete:
     delete:
       summary: Delete expense
-      tags: [Expenses]
+      description: Deletes expense (only in draft or reported state)
+      security:
+        - bearerAuth: []
       parameters:
         - name: expense_id
           in: path
@@ -177,16 +429,25 @@ paths:
           description: Expense deleted successfully
         '403':
           description: Cannot delete expense in current state
-
+        '404':
+          description: Expense not found
   /api/v1/expense/reports:
     get:
-      summary: Get list of expense reports
-      tags: [Reports]
+      summary: Get expense reports list
+      description: Returns a list of expense reports for the authenticated employee
+      security:
+        - bearerAuth: []
       parameters:
         - name: state
           in: query
           schema:
             type: string
+          description: Filter by report state
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Search by report name
         - name: date_from
           in: query
           schema:
@@ -197,14 +458,51 @@ paths:
           schema:
             type: string
             format: date
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            default: create_date
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
       responses:
         '200':
-          description: List of expense reports
-
+          description: Successful response
+  /api/v1/report/{report_id}:
+    get:
+      summary: Get single expense report details
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: report_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/ExpenseReport'
+        '404':
+          description: Report not found
   /api/v1/expense/create-report:
     post:
       summary: Create expense report
-      tags: [Reports]
+      description: Creates an expense report with multiple expenses
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -216,34 +514,26 @@ paths:
               properties:
                 name:
                   type: string
-                  example: "Monthly Expenses October"
+                  description: Report name (auto-generated if not provided)
                 expense_ids:
                   type: array
                   items:
                     type: integer
-                  example: [1, 2, 3]
+                  description: List of expense IDs to include
+                journal_id:
+                  type: integer
+                  description: Journal ID (optional)
       responses:
         '201':
           description: Report created successfully
-
-  /api/v1/report/{report_id}:
-    get:
-      summary: Get report details
-      tags: [Reports]
-      parameters:
-        - name: report_id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Report details with all expenses
-
+        '400':
+          description: Invalid request
   /api/v1/report/{report_id}/submit:
     post:
-      summary: Submit report for approval
-      tags: [Reports]
+      summary: Submit expense report
+      description: Submits expense report for approval
+      security:
+        - bearerAuth: []
       parameters:
         - name: report_id
           in: path
@@ -253,11 +543,13 @@ paths:
       responses:
         '200':
           description: Report submitted successfully
-
+        '400':
+          description: Cannot submit report in current state
   /api/v1/expense/{expense_id}/attachments:
     get:
-      summary: Get list of attachments
-      tags: [Attachments]
+      summary: Get expense attachments list
+      security:
+        - bearerAuth: []
       parameters:
         - name: expense_id
           in: path
@@ -266,11 +558,11 @@ paths:
             type: integer
       responses:
         '200':
-          description: List of attachments
-
+          description: Successful response
     post:
-      summary: Upload attachment
-      tags: [Attachments]
+      summary: Create attachment for expense
+      security:
+        - bearerAuth: []
       parameters:
         - name: expense_id
           in: path
@@ -289,19 +581,23 @@ paths:
               properties:
                 file_name:
                   type: string
-                  example: "receipt.pdf"
+                  description: File name with extension
                 file_data:
                   type: string
-                  format: base64
-                  example: "JVBERi0xLjQKJeLjz9MKMSAwIG..."
+                  description: Base64 encoded file data
       responses:
         '201':
           description: Attachment created successfully
-
+        '400':
+          description: Invalid request
+        '403':
+          description: Cannot create attachment in current expense state
   /api/v1/expense/file/{expense_id}/attachments/{attachment_id}:
     get:
       summary: Download attachment file
-      tags: [Attachments]
+      description: Returns the attachment file as binary data
+      security:
+        - bearerAuth: []
       parameters:
         - name: expense_id
           in: path
@@ -315,17 +611,76 @@ paths:
             type: integer
       responses:
         '200':
-          description: File binary data
+          description: File downloaded successfully
           content:
-            application/octet-stream:
+            application/pdf:
               schema:
                 type: string
                 format: binary
-
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '403':
+          description: Access denied
+        '404':
+          description: Attachment not found
   /api/v1/expense/{expense_id}/attachment/{attachment_id}:
+    get:
+      summary: Get attachment data
+      description: Returns attachment metadata and base64 encoded data
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: expense_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: attachment_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+    put:
+      summary: Update attachment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: expense_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: attachment_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                file_name:
+                  type: string
+                file_data:
+                  type: string
+      responses:
+        '200':
+          description: Attachment updated successfully
     delete:
       summary: Delete attachment
-      tags: [Attachments]
+      security:
+        - bearerAuth: []
       parameters:
         - name: expense_id
           in: path
@@ -340,30 +695,75 @@ paths:
       responses:
         '200':
           description: Attachment deleted successfully
-
   /api/v1/expense/categories:
     get:
       summary: Get expense categories
-      tags: [Public]
+      description: Returns list of products that can be used for expenses (public endpoint)
       security: []
       responses:
         '200':
-          description: List of expense categories
-
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  categories:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        default_code:
+                          type: string
+                        list_price:
+                          type: number
+                        uom_name:
+                          type: string
+                  count:
+                    type: integer
   /api/v1/expense/vendors:
     get:
       summary: Get vendors list
-      tags: [Public]
+      description: Returns list of vendors for company_account payment mode (public endpoint)
       security: []
       responses:
         '200':
-          description: List of vendors
-
+          description: Successful response
   /api/v1/vehicles:
     get:
       summary: Get vehicles list
-      tags: [Public]
+      description: Returns list of all available vehicles (public endpoint)
       security: []
       responses:
         '200':
-          description: List of available vehicles
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                  vehicles:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        driver:
+                          type: string
+                          nullable: true
+                        employee_id:
+                          type: integer
+                          nullable: true
