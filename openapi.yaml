@@ -528,6 +528,203 @@ paths:
           description: Report created successfully
         '400':
           description: Invalid request
+
+  paths:
+  /api/v1/report/{report_id}:
+    put:
+      summary: Update expense report
+      description: |
+        Updates an expense report by adding or removing expenses.
+        
+        **Important Rules:**
+        - Only works for reports in **'draft'** state
+        - All expenses must belong to the authenticated employee
+        - Expenses must be in 'draft' or 'reported' state
+        - Expenses cannot be in other active reports
+        - **If expense_ids is an empty array [], the report will be automatically deleted**
+        
+        **Behavior:**
+        - Replaces all expenses in the report with the provided list
+        - Draft expenses are automatically changed to 'reported' state
+        - Empty draft reports are automatically cleaned up
+      tags:
+        - Expense Reports
+      parameters:
+        - name: report_id
+          in: path
+          required: true
+          description: ID of the expense report to update
+          schema:
+            type: integer
+          example: 42
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReportRequest'
+            examples:
+              update_expenses:
+                summary: Update report with new expenses
+                value:
+                  expense_ids: [101, 102, 103]
+                  name: "Updated Business Trip - October 2025"
+                  journal_id: 5
+              
+              remove_one_expense:
+                summary: Remove one expense from report
+                description: Keep only expenses 101 and 102, remove 103
+                value:
+                  expense_ids: [101, 102]
+              
+              delete_report:
+                summary: Delete report (empty expense list)
+                description: Passing an empty array will delete the entire report
+                value:
+                  expense_ids: []
+      
+      responses:
+        '200':
+          description: |
+            Report updated successfully.
+            
+            **Note:** If expense_ids was empty, the report is deleted and you'll receive a DeleteReportResponse instead.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/UpdateReportSuccessResponse'
+                  - $ref: '#/components/schemas/DeleteReportResponse'
+              examples:
+                update_success:
+                  summary: Report updated successfully
+                  value:
+                    success: true
+                    report_id: 42
+                    report_name: "Business Trip - October 2025"
+                    employee_id: 15
+                    employee_name: "John Doe"
+                    company_id: 1
+                    company_name: "My Company"
+                    total_amount: 450.75
+                    expense_count: 3
+                    state: "draft"
+                    expenses_updated:
+                      - id: 101
+                        state: "reported"
+                      - id: 102
+                        state: "reported"
+                      - id: 103
+                        state: "reported"
+                    message: "Expense report updated successfully"
+                
+                report_deleted:
+                  summary: Report deleted (empty expense_ids)
+                  value:
+                    success: true
+                    report_deleted: true
+                    report_id: 42
+                    report_name: "Business Trip - October 2025"
+                    message: "Expense report deleted because no expenses remained"
+        
+        '400':
+          description: Bad request - validation error
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - $ref: '#/components/schemas/ValidationErrorResponse'
+                  - $ref: '#/components/schemas/StateErrorResponse'
+              examples:
+                empty_body:
+                  summary: Empty request body
+                  value:
+                    error: "Empty request body. Please provide JSON data"
+                
+                invalid_json:
+                  summary: Invalid JSON format
+                  value:
+                    error: "Invalid JSON format: Expecting value: line 1 column 1 (char 0)"
+                
+                missing_expense_ids:
+                  summary: Missing expense_ids field
+                  value:
+                    error: "expense_ids list is required"
+                
+                wrong_state:
+                  summary: Report not in draft state
+                  value:
+                    error: "Report can only be edited in \"draft\" state"
+                    current_state: "approve"
+                
+                expenses_not_found:
+                  summary: Some expenses don't exist
+                  value:
+                    error: "Some expenses not found"
+                
+                invalid_expense_state:
+                  summary: Expenses in wrong state
+                  value:
+                    error: "Expenses must be in \"draft\" or \"reported\" state"
+                    invalid_expense_ids: [105, 106]
+                    invalid_states:
+                      - id: 105
+                        state: "approved"
+                      - id: 106
+                        state: "done"
+                
+                expenses_in_other_reports:
+                  summary: Expenses already in other reports
+                  value:
+                    error: "Some expenses are already included in other reports"
+                    expenses_in_reports:
+                      - id: 107
+                        sheet_id: 50
+                        sheet_name: "Another Report"
+                      - id: 108
+                        sheet_id: 51
+                        sheet_name: "Different Report"
+        
+        '403':
+          description: Forbidden - not authorized to edit this report
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - $ref: '#/components/schemas/ValidationErrorResponse'
+              examples:
+                not_own_report:
+                  summary: Report belongs to another employee
+                  value:
+                    error: "You can only edit your own expense reports"
+                
+                not_own_expenses:
+                  summary: Some expenses belong to another employee
+                  value:
+                    error: "All expenses must belong to you"
+                    invalid_expense_ids: [109, 110]
+        
+        '404':
+          description: Expense report not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Expense report not found"
+        
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Internal server error: Database connection failed"
+
+  
   /api/v1/report/{report_id}/submit:
     post:
       summary: Submit expense report
